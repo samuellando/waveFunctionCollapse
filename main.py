@@ -1,97 +1,146 @@
 import random
-import os
+import imageio.v3 as iio
+import pygame
 
-def main():
-    pixels = [
-            {
-                "char": "w",
-                "top": ["s","w"], 
-                "bottom": ["s", "w"], 
-                "left": ["s", "w"], 
-                "right": ["s", "w"], 
-            },
-            {
-                "char": "s",
-                "top": ["g","w"], 
-                "bottom": ["g", "w"], 
-                "left": ["g", "w"], 
-                "right": ["g", "w"], 
-            },
-            {
-                "char": "b",
-                "top": ["g","f"], 
-                "bottom": ["g", "f"], 
-                "left": ["g", "f"], 
-                "right": ["g", "f"], 
-            },
-            {
-                "char": "f",
-                "top": ["b","f"], 
-                "bottom": ["b", "f"], 
-                "left": ["b", "f"], 
-                "right": ["b", "f"], 
-            },
-            {
-                "char": "g",
-                "top": ["g","b","s"], 
-                "bottom": ["g", "b", "s"],
-                "left": ["g", "b", "s"],
-                "right": ["g", "b", "s"],
+pygame.init()
+
+def collapse(options, w, h):
+    outcomes = [[options.copy() for _ in range(w)] for _ in range(h)]
+    mask = outcomes
+
+    s = []
+    while True:
+        if len(s) == 0:
+            for i, r in enumerate(outcomes):
+                for j, l in enumerate(r):
+                    s.append([l, i, j])
+            s = list(filter(lambda x: len(x[0]) >= 1 and not x[0][0]["collapsed"], s))
+            if len(s) == 0:
+                break
+        m = min(s, key=lambda x: len(x[0]))
+        options = list(filter(lambda x: len(x[0]) == len(m[0]), s))
+        p = random.choice(options)
+        # Randomly choose from the possible outcomes
+        y = random.choice(p[0]).copy()
+        # Update the pixel
+        y["collapsed"] = True
+        p[0] = [y]
+        outcomes[p[1]][p[2]] = [y]
+        mask[p[1]][p[2]] = [y]
+        # Update the surrounding pixels
+        s = []
+        if p[1] > 0 and len(outcomes[p[1]-1][p[2]]) > 1:
+            l = len(outcomes[p[1]-1][p[2]])
+            outcomes[p[1]-1][p[2]] = list(filter(lambda x: x["adj"][2] == y["adj"][0], outcomes[p[1]-1][p[2]]))
+            mask[p[1]-1][p[2]] = outcomes[p[1]-1][p[2]]
+            if l != len(outcomes[p[1]-1][p[2]]) and len(outcomes[p[1]-1][p[2]]) >= 1:
+                s.append([outcomes[p[1]-1][p[2]], p[1]-1, p[2]])
+        if p[1] < h-1 and len(outcomes[p[1]+1][p[2]]) > 1:
+            l = len(outcomes[p[1]+1][p[2]])
+            outcomes[p[1]+1][p[2]] = list(filter(lambda x: x["adj"][0] == y["adj"][2], outcomes[p[1]+1][p[2]]))
+            mask[p[1]+1][p[2]] = outcomes[p[1]+1][p[2]]
+            if l != len(outcomes[p[1]+1][p[2]]) and len(outcomes[p[1]+1][p[2]]) >= 1:
+                s.append([outcomes[p[1]+1][p[2]], p[1]+1, p[2]])
+        if p[2] > 0 and len(outcomes[p[1]][p[2]-1]) > 1:
+            l = len(outcomes[p[1]][p[2]-1])
+            outcomes[p[1]][p[2]-1] = list(filter(lambda x: x["adj"][1] == y["adj"][3], outcomes[p[1]][p[2]-1]))
+            mask[p[1]][p[2]-1] = outcomes[p[1]][p[2]-1]
+            if l != len(outcomes[p[1]][p[2]-1]) and len(outcomes[p[1]][p[2]-1]) >= 1:
+                s.append([outcomes[p[1]][p[2]-1], p[1], p[2]-1])
+        if p[2] < w-1 and len(outcomes[p[1]][p[2]+1]) > 1:
+            l = len(outcomes[p[1]][p[2]+1])
+            outcomes[p[1]][p[2]+1] = list(filter(lambda x: x["adj"][3] == y["adj"][1], outcomes[p[1]][p[2]+1]))
+            mask[p[1]][p[2]+1] = outcomes[p[1]][p[2]+1]
+            if l != len(outcomes[p[1]][p[2]+1]) and len(outcomes[p[1]][p[2]+1]) >= 1:
+                s.append([outcomes[p[1]][p[2]+1], p[1], p[2]+1])
+        yield mask
+        mask = [[None] * w for _ in range(h)]
+
+    return outcomes
+
+def toHex(a):
+    s = ""
+    for rgba in a:
+        for v in rgba[:3]:
+            s += hex(v).replace("0x", "").zfill(2)
+    return s
+
+import re
+def allRoations(a):
+    for tile in a:
+        adj = tile["adj"]
+        for i in range(4):
+            yield {
+                "collapsed": tile["collapsed"],
+                "title": tile["title"],
+                "image": pygame.transform.rotate(tile["image"], i * 90),
+                "adj": adj
             }
-        ]
+            adj = adj[1:] + adj[:1]
+            adj[1] = "".join(re.findall("......", adj[1])[::-1])
+            adj[3] = "".join(re.findall("......", adj[3])[::-1])
 
-    w = 10
-    outcomes = [[pixels.copy() for _ in range(w)] for _ in range(w)]
-    image = [["."] * w for _ in range(w)]
+def allFlips(a):
+    for tile in a:
+        adj = tile["adj"]
+        yield tile
+        adj[0] = "".join(re.findall("......", adj[0])[::-1])
+        adj[2] = "".join(re.findall("......", adj[2])[::-1])
+        yield {
+            "collapsed": tile["collapsed"],
+            "title": tile["title"],
+            "image": pygame.transform.flip(tile["image"], True, False),
+            "adj": [adj[0], adj[3], adj[2], adj[1]]
+        }
 
-    stop = w * w
-
-    while stop > 0:
-        os.system("clear")
-        match = False
-        for i in range(w):
-            for j in range(w):
-                if len(outcomes[i][j]) == 1:
-                    char = outcomes[i][j][0]["char"]
-                    image[i][j] = char
-                    stop -= 1
-                    match = True
-                    print('match', i, j)
-                    outcomes[i][j] = []
-                    if i > 0:
-                        outcomes[i-1][j] = list(filter(lambda x: char in x["bottom"], outcomes[i-1][j]))
-                    if i < len(outcomes) - 1:
-                        outcomes[i+1][j] = list(filter(lambda x: char in x["top"], outcomes[i+1][j]))
-                    if j > 0:
-                        outcomes[i][j-1] = list(filter(lambda x: char in x["right"], outcomes[i][j-1]))
-                    if j < len(outcomes[i]) - 1:
-                        outcomes[i][j+1] = list(filter(lambda x: char in x["left"], outcomes[i][j+1]))
-
-        if not match:
-            # Find the min non zero
-            mini = 0
-            minj = 0
-            min_non_zero = 100
-            for i in range(w):
-                for j in range(w):
-                    if len(outcomes[i][j]) > 0 and len(outcomes[i][j]) < min_non_zero:
-                        min_non_zero = len(outcomes[i][j])
-                        mini = i
-                        minj = j
-            print("no match", mini, minj)
-            if len(outcomes[mini][minj]) > 0:
-                k = random.randint(0, len(outcomes[mini][minj]) - 1)
-                outcomes[mini][minj] = [outcomes[mini][minj][k]]
-
-        for r in image:
-            for c in r:
-                print(c, end=" ")
-            print()
-        print("stop: ", stop)
-        for r in outcomes:
-            for c in r:
-                print(len(c), end=" ")
-            print()
-
+import os
+import sys
 if __name__ == "__main__":
-    main()
+    w = 100
+    d = sys.argv[1]
+    tiles = os.listdir("tiles/"+d)
+    options = []
+    for t in tiles:
+        im = iio.imread("tiles/" + d + "/" + t)
+        top = toHex(im[0, :])
+        bottom = toHex(im[-1, :])
+        left = toHex(im[:, 0])
+        right = toHex(im[:, -1])
+        options.append({
+            "collapsed": False,
+            "title": t,
+            "image": pygame.image.load("tiles/" + d + "/" + t),
+            "adj": [top, right, bottom, left]
+        })
+
+
+    display_width = w * 10
+    display_height = w * 10
+    display = pygame.display.set_mode((display_width,display_height))
+    clock = pygame.time.Clock()
+
+    black = (0,0,0)
+    white = (255,255,255)
+    font = pygame.font.SysFont('freesans', 6)
+    options = list(allRoations(options))
+    options = list(allFlips(options))
+        
+    run = False
+    display.fill(black)
+    for m in collapse(options, w, w):
+        for i, r in enumerate(m):
+            for j, c in enumerate(r):
+                if c is not None:
+                    if len(c) == 1 and c[0]["collapsed"]:
+                        display.blit(c[0]["image"], (j*10, i*10))
+                    else:
+                        # print the len of c
+                        img = font.render(str(len(c)), True, white)
+                        display.fill(black, (j*10, i*10, 10, 10))
+                        display.blit(img, (j*10 + 2, i*10 + 2))
+
+        pygame.display.update()
+
+    while True:
+        pass
+
