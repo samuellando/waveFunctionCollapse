@@ -2,12 +2,12 @@ import pygame
 from EigenTile import EigenTile
 from Board import Board
 
-#pygame.init()
+pygame.init()
 
 import os
 import sys
 if __name__ == "__main__":
-    w = 10
+    w = 100
     d = sys.argv[1]
     images = os.listdir("tiles/"+d)
     subtiles = []
@@ -19,32 +19,25 @@ if __name__ == "__main__":
 
     display_width = w * 10
     display_height = w * 10
-    #display = pygame.display.set_mode((display_width,display_height))
-    #clock = pygame.time.Clock()
+    display = pygame.display.set_mode((display_width,display_height))
+    clock = pygame.time.Clock()
 
     black = (0,0,0)
     white = (255,255,255)
-    #font = pygame.font.SysFont('freesans', 6)
+    font = pygame.font.SysFont('freesans', 6)
         
     run = False
-    #display.fill(black)
+    display.fill(black)
     for updates in board.getUpdates():
         for u in updates:
-            print(u.tile.entropy(), end=" ")
-        print()
-
-
-        """
-        for i, r in enumerate(m):
-            for j, c in enumerate(r):
-                if c is not None:
-                    if len(c) == 1 and c[0]["collapsed"]:
-                        display.blit(c[0]["image"], (j*10, i*10))
-                    else:
-                        # print the len of c
-                        img = font.render(str(len(c)), True, white)
-                        display.fill(black, (j*10, i*10, 10, 10))
-                        display.blit(img, (j*10 + 2, i*10 + 2))
+            if u.tile.isCollapsed() and u.tile.observe() is not None:
+                display.blit(u.tile.observe().image, (u.x * 10, u.y * 10))
+            else:
+                # print the len of c
+                img = font.render(str(u.tile.entropy()), True, white)
+                display.fill(black, (u.x*10, u.y*10, 10, 10))
+                display.blit(img, (u.x*10 + 2, u.y*10 + 2))
 
         pygame.display.update()
-        """
+
+    input()

@@ -37,18 +37,19 @@ class Board:
             selection.collapse()
             updates.append(Board.Update(selection, x, y))
 
-            if x > 0 and not self.board[y][x-1].isCollapsed():
-                self.board[y][x-1].collapse(selection, Sockets.RIGHT)
-                updates.append(Board.Update(self.board[y][x-1], x-1, y))
-            if x < len(self.board[0]) - 1 and not self.board[y][x+1].isCollapsed():
-                self.board[y][x+1].collapse(selection, Sockets.LEFT)
-                updates.append(Board.Update(self.board[y][x+1], x+1, y))
-            if y > 0 and not self.board[y-1][x].isCollapsed():
-                self.board[y-1][x].collapse(selection, Sockets.BOTTOM)
-                updates.append(Board.Update(self.board[y-1][x], x, y-1))
-            if y < len(self.board) - 1 and not self.board[y+1][x].isCollapsed():
-                self.board[y+1][x].collapse(selection, Sockets.TOP)
-                updates.append(Board.Update(self.board[y+1][x], x, y+1))
+            if selection.observe() is not None:
+                if x > 0 and not self.board[y][x-1].isCollapsed():
+                    self.board[y][x-1].collapse(selection, Sockets.RIGHT)
+                    updates.append(Board.Update(self.board[y][x-1], x-1, y))
+                if x < len(self.board[0]) - 1 and not self.board[y][x+1].isCollapsed():
+                    self.board[y][x+1].collapse(selection, Sockets.LEFT)
+                    updates.append(Board.Update(self.board[y][x+1], x+1, y))
+                if y > 0 and not self.board[y-1][x].isCollapsed():
+                    self.board[y-1][x].collapse(selection, Sockets.BOTTOM)
+                    updates.append(Board.Update(self.board[y-1][x], x, y-1))
+                if y < len(self.board) - 1 and not self.board[y+1][x].isCollapsed():
+                    self.board[y+1][x].collapse(selection, Sockets.TOP)
+                    updates.append(Board.Update(self.board[y+1][x], x, y+1))
 
             yield updates
 

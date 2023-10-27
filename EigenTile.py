@@ -31,6 +31,8 @@ class EigenTile:
             self.collapsed = True
 
     def observe(self):
+        if len(self.states) == 0:
+            return None
         if self.collapsed:
             return self.states[0]
         else:
