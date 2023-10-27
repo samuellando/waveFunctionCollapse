@@ -42,24 +42,6 @@ class EigenTile:
     def entropy(self):
         return len(self.states)
 
-    def __lt__(self, other):
-        return self.entropy() < other.entropy()
-
-    def __gt__(self, other):
-        return self.entropy() > other.entropy()
-    
-    def __eq__(self, other):
-        return self.entropy() == other.entropy()
-    
-    def __le__(self, other):
-        return self.entropy() <= other.entropy()
-    
-    def __ge__(self, other):
-        return self.entropy() >= other.entropy()
-    
-    def __ne__(self, other):
-        return self.entropy() != other.entropy()
-
     def clone(self):
         return EigenTile(None, self.states.copy())
 
@@ -80,22 +62,44 @@ class EigenTile:
 
         return et
 
-
     class Tile:
+        sockets = {}
+
         def __init__(self, data):
-            self.top = data[0, :]
-            self.bottom = data[-1, :]
-            self.left = data[:, 0]
-            self.right = data[:, -1]
+            top = data[0, :].tobytes()
+            if top in EigenTile.Tile.sockets:
+                self.top = EigenTile.Tile.sockets[top]
+            else:
+                self.top = len(EigenTile.Tile.sockets)
+                EigenTile.Tile.sockets[top] = len(EigenTile.Tile.sockets)
+            bottom = data[-1, :].tobytes()
+            if bottom in EigenTile.Tile.sockets:
+                self.bottom = EigenTile.Tile.sockets[bottom]
+            else:
+                self.bottom = len(EigenTile.Tile.sockets)
+                EigenTile.Tile.sockets[bottom] = len(EigenTile.Tile.sockets)
+            left = data[:, 0].tobytes()
+            if left in EigenTile.Tile.sockets:
+                self.left = EigenTile.Tile.sockets[left]
+            else:
+                self.left = len(EigenTile.Tile.sockets)
+                EigenTile.Tile.sockets[left] = len(EigenTile.Tile.sockets)
+            right = data[:, -1].tobytes()
+            if right in EigenTile.Tile.sockets:
+                self.right = EigenTile.Tile.sockets[right]
+            else:
+                self.right = len(EigenTile.Tile.sockets)
+                EigenTile.Tile.sockets[right] = len(EigenTile.Tile.sockets)
+
             self.image = pygame.image.frombytes(data.tobytes(), (len(data[0]), len(data)), "RGBA")
 
         def fits(self, tile, socket):
             match socket:
                 case Sockets.TOP:
-                    return np.array_equiv(self.top, tile.bottom)
+                    return self.top == tile.bottom
                 case Sockets.BOTTOM:
-                    return np.array_equiv(self.bottom, tile.top)
+                    return self.bottom == tile.top
                 case Sockets.LEFT:
-                    return np.array_equiv(self.left, tile.right)
+                    return self.left == tile.right
                 case Sockets.RIGHT:
-                    return np.array_equiv(self.right, tile.left)
+                    return self.right == tile.left
