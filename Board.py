@@ -1,5 +1,5 @@
 from EigenTile import EigenTile, Sockets
-import heapq
+import heapdict
 
 class Board:
     class Update:
@@ -18,19 +18,18 @@ class Board:
 
     def getUpdates(self):
         updates = []
-        s = []
+        h = heapdict.heapdict()
         for y in range(self.h):
             for x in range(self.w):
                 updates.append(Board.Update(self.board[y][x], x, y))
-                s.append((self.board[y][x], (x, y)))
+                h[(x, y)] = self.board[y][x].entropy()
 
         yield updates
 
-        heapq.heapify(s)
-        while len(s) > 0:
+        for _ in range(self.w * self.h):
             updates = []
 
-            p = heapq.heappop(s)[1]
+            p, _ = h.popitem()
             x = p[0]
             y = p[1]
             selection = self.board[y][x]
@@ -41,16 +40,18 @@ class Board:
                 if x > 0 and not self.board[y][x-1].isCollapsed():
                     self.board[y][x-1].collapse(selection, Sockets.RIGHT)
                     updates.append(Board.Update(self.board[y][x-1], x-1, y))
+                    h[(x-1, y)] = self.board[y][x-1].entropy()
                 if x < len(self.board[0]) - 1 and not self.board[y][x+1].isCollapsed():
                     self.board[y][x+1].collapse(selection, Sockets.LEFT)
                     updates.append(Board.Update(self.board[y][x+1], x+1, y))
+                    h[(x+1, y)] = self.board[y][x+1].entropy()
                 if y > 0 and not self.board[y-1][x].isCollapsed():
                     self.board[y-1][x].collapse(selection, Sockets.BOTTOM)
                     updates.append(Board.Update(self.board[y-1][x], x, y-1))
+                    h[(x, y-1)] = self.board[y-1][x].entropy()
                 if y < len(self.board) - 1 and not self.board[y+1][x].isCollapsed():
                     self.board[y+1][x].collapse(selection, Sockets.TOP)
                     updates.append(Board.Update(self.board[y+1][x], x, y+1))
+                    h[(x,y+1)] = self.board[y+1][x].entropy()
 
             yield updates
-
-            heapq.heapify(s)
